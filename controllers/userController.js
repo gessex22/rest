@@ -1,52 +1,82 @@
-const { response } = require("express");
+const { response, request } = require("express");
+const bcrypt = require("bcryptjs");
 
-const userGet = (req, res =  response) => {
+const User = require("../models/user.js");
+const { validationResult } = require("express-validator");
 
-        const {nombre = 'undefined', apkey} = req.query
+const userGet = async (req, res = response) => {
+  const { nombre = "undefined", apkey, limit = 5, skip = 0 } = req.query;
+  const query = { status: true };
+
+  const [total, users] = await Promise.all([
+    User.count(query),
+    User.find(query).skip(Number(skip)).limit(Number(limit)),
+  ]);
 
   res.json({
-    msg: "get - api - controller",
-    nombre,
-    q,
-    apkey
+    total,
+    users,
   });
 };
 
-const userPut = (req,res =  response) =>{
+const userPut = async (req, res = response) => {
+  const { userId } = req.params;
+  const { password, google, ...rest } = req.body;
 
-    const {userId}  = req.params
+  if (password) {
+    const salt = bcrypt.genSaltSync();
+    rest.password = bcrypt.hashSync(password, salt);
+  }
 
-res.status(500).json({
+  const userInfo = await User.findByIdAndUpdate(userId, rest);
+
+  res.status(500).json({
     msg: "put - api - controller",
-    userId
-})
+    userInfo,
+  });
+};
+const userDel = async (req, res = response) => {
 
-}
-const userDel = (req,res =  response) =>{
-    res.json({
-        msg: "del - api - controller",
-      });
-    
-}
-const userPost = (req,res =  response) =>{
-    const body = req.body
-    res.status(201).json({
-        msg: "post - api - controller",
-        body
-      });
-}
+  const { userId } = req.params
 
-const userPatch = (req,res =  response) =>{
+  const resps =  await User.findByIdAndUpdate(userId,{status: false})
 
-    res.json({
-        msg: "path - api - controller",
-      });
-}
+
+
+  res.json({
+  id : userId,
+  resps
+  });
+};
+const userPost = async (req, res = response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors });
+  }
+
+  const { name, email, password, rol } = req.body;
+  const user = new User({ name, email, password, rol });
+  const salt = bcrypt.genSaltSync();
+  user.password = bcrypt.hashSync(password, salt);
+
+  await user.save();
+
+  res.status(201).json({
+    msg: "post - api - controller",
+    user,
+  });
+};
+
+const userPatch = (req, res = response) => {
+  res.json({
+    msg: "path - api - controller",
+  });
+};
 
 module.exports = {
   userGet,
   userPut,
   userDel,
   userPost,
-  userPatch
+  userPatch,
 };

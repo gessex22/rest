@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const { dbconection } = require('../db/configdb')
 const dotenv = require('dotenv').config()
 
 
@@ -10,6 +11,7 @@ class Server{
         this.app = express()
         this.port = process.env.PORT
         this.userpath = '/api/users'
+        this.dbConect()
         
         this.middlewares()
         this.routes()
@@ -22,6 +24,9 @@ class Server{
         this.app.use(express.static('public'))
     }
 
+    async dbConect (){
+        await dbconection()
+    }
     routes(){
         this.app.use(this.userpath, require('../routes/user-routes'))
     }
